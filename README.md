@@ -4,6 +4,10 @@ An end-to-end pipeline that turns raw video/audio (YouTube links or local files)
 
 Built with **LangChain (LCEL)**, **Google Gemini**, **OpenAI Whisper**, **Sarvam AI**, **ChromaDB**, and **Streamlit**.
 
+🔗 **[Live Demo](https://your-streamlit-url-here.streamlit.app)** *(replace with your actual deployed URL)*
+
+> ⚠️ **Known limitation on the live demo:** YouTube URL processing works reliably when run locally, but may fail on the deployed version — YouTube blocks requests from cloud/datacenter IP ranges (this affects Streamlit Cloud, Hugging Face Spaces, and virtually every free cloud host equally, not just this project). **File upload is the recommended input method on the live demo.** YouTube URL input works perfectly when the app is run locally. See the demo video below for the full pipeline including YouTube URL support.
+
 ---
 
 ## ✨ Features
@@ -79,9 +83,9 @@ All Gemini API calls are routed through a custom **rate limiter with exponential
 | Orchestration | LangChain (LCEL — pipe-based chains) |
 | Speech-to-Text (English) | OpenAI Whisper — local model, no API cost |
 | Speech-to-Text + Translation (Hinglish) | Sarvam AI (`saaras:v2.5`) — cloud API |
-| Vector Store / RAG | ChromaDB + HuggingFace sentence-transformer embeddings |
+| Vector Store / RAG | ChromaDB (`langchain-chroma`) + HuggingFace sentence-transformer embeddings |
 | Frontend | Streamlit |
-| Audio ingestion | yt-dlp, pydub, ffmpeg |
+| Audio ingestion | yt-dlp, pydub, ffmpeg, torchvision |
 
 ---
 
@@ -89,8 +93,8 @@ All Gemini API calls are routed through a custom **rate limiter with exponential
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/ai-video-meeting-assistant.git
-cd ai-video-meeting-assistant
+git clone https://github.com/Shahnaz-Parveen/AI-Video-Meeting-Assistant.git
+cd AI-Video-Meeting-Assistant
 ```
 
 ### 2. Create a virtual environment
@@ -102,9 +106,11 @@ python -m venv .venv
 source .venv/bin/activate
 ```
 
+> This project is tested on **Python 3.11**. A `runtime.txt` file pins this version for cloud deployment.
+
 ### 3. Install dependencies
 ```bash
-pip install -r Requirements.txt
+pip install -r requirements.txt
 ```
 
 ### 4. Install FFmpeg (required for audio processing)
@@ -112,14 +118,18 @@ pip install -r Requirements.txt
 - **macOS:** `brew install ffmpeg`
 - **Linux:** `sudo apt-get install ffmpeg`
 
+> For cloud deployment (e.g. Streamlit Cloud), `packages.txt` handles installing `ffmpeg` at the system level automatically — no manual step needed there.
+
 ### 5. Set up your API keys
 Create a `.env` file in the project root:
 ```env
 GOOGLE_API_KEY=your_gemini_api_key_here
 SARVAM_API_KEY=your_sarvam_api_key_here
+HF_TOKEN=your_huggingface_token_here
 ```
 - Gemini key (free, no credit card): [Google AI Studio](https://aistudio.google.com/apikey)
 - Sarvam key (only needed if you plan to use Hinglish transcription): [Sarvam AI](https://www.sarvam.ai/)
+- Hugging Face token (optional, improves embedding model download rate limits): [HF Tokens](https://huggingface.co/settings/tokens)
 
 > **Note:** `SARVAM_API_KEY` is only required if you select "hinglish" as the transcription language. English-only usage works with just the Gemini key.
 
@@ -132,8 +142,22 @@ python main.py
 
 **Streamlit web app:**
 ```bash
-streamlit run app.py
+python -m streamlit run app.py
 ```
+
+---
+
+## ☁️ Deployment
+
+This project is deployed on **Streamlit Community Cloud**, pulling directly from this GitHub repo. Three deployment-specific files make this work:
+
+| File | Purpose |
+|---|---|
+| `requirements.txt` | Python package dependencies |
+| `packages.txt` | System-level dependencies (`ffmpeg`, needed for audio processing on the cloud host) |
+| `runtime.txt` | Pins the Python version (3.11) used by the deployment environment |
+
+If deploying your own fork, remember to set your secrets (`GOOGLE_API_KEY`, `SARVAM_API_KEY`, `HF_TOKEN`, `WHISPER_MODEL`) in Streamlit Cloud's **Advanced Settings → Secrets** panel, and explicitly select **Python 3.11** in the Python version dropdown at deploy time (the `runtime.txt` file alone has been unreliable on Streamlit Cloud as of late 2026).
 
 ---
 
@@ -149,6 +173,11 @@ To stay within these limits, the project includes:
 - Tunable transcript chunking (`chunk_size` / `chunk_overlap`) to balance summary quality against number of API calls
 
 Whisper transcription (English) runs locally and has no API quota at all. Sarvam transcription (Hinglish) is subject to Sarvam's own separate rate limits — check their docs if you plan on heavy Hinglish usage.
+
+**Because this runs on a free tier, a few consequences are worth knowing if you fork or rely on this:**
+- Heavy usage (many videos processed in a short window) can hit the 500/day or 15/minute ceiling, resulting in temporary `429` errors until quota resets (daily reset is midnight Pacific Time)
+- Model availability has shifted multiple times during development as Google deprecates older model versions — the model name in `core/summarizer.py`, `core/extractor.py`, and `core/rag_engine.py` may need updating if Google retires `gemini-3.5-flash-lite` in the future
+- No paid fallback is configured — if quota is exhausted, the app will show an error rather than silently switching to a paid tier (this is intentional, to avoid unexpected charges)
 
 ---
 
@@ -166,8 +195,11 @@ Whisper transcription (English) runs locally and has no API quota at all. Sarvam
 │   └── rate_limiter.py     # API call throttling + retry logic
 ├── utils/
 │   └── audio_processor.py  # YouTube/local file ingestion, WAV conversion & chunking
-├── Requirements.txt
-└── .env                    # API keys (not committed — see .gitignore)
+├── requirements.txt         # Python dependencies
+├── packages.txt             # System dependencies for cloud deployment (ffmpeg)
+├── runtime.txt               # Python version pin (3.11) for cloud deployment
+├── demo.png                  # App screenshot
+└── .env                       # API keys (not committed — see .gitignore)
 ```
 
 ---
@@ -185,6 +217,7 @@ This is fully automatic — the caller just passes `language="hinglish"` and nev
 
 ## 🚧 Known Limitations
 
+- **YouTube URL input fails on cloud deployment** — YouTube blocks requests from datacenter/cloud IP ranges, affecting Streamlit Cloud, Hugging Face Spaces, and most free cloud hosts equally. Works reliably when run locally. File upload is unaffected either way.
 - Free-tier daily quota (500 requests/day on Gemini) means heavy usage or many concurrent users could hit rate limits
 - Whisper transcription runs on CPU by default — larger files take longer without a GPU
 - Hinglish transcription depends on Sarvam AI's API availability and its own separate rate limits
@@ -197,6 +230,7 @@ This is fully automatic — the caller just passes `language="hinglish"` and nev
 - Speaker diarization (who said what)
 - Support for additional languages beyond English/Hinglish
 - Persistent storage for multiple past meetings
+- Residential proxy integration for reliable YouTube URL support on cloud deployments
 - Deployment with billing-capped Gemini tier for public access
 
 ---
