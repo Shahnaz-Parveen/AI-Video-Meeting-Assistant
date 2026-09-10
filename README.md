@@ -21,6 +21,12 @@ Built with **LangChain (LCEL)**, **Google Gemini**, **OpenAI Whisper**, **Sarvam
 
 ---
 
+## 🖥️ Demo
+
+![App Screenshot](demo.png)
+
+---
+
 ## 🏗️ Architecture
 
 ```
