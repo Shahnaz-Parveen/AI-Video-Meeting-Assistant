@@ -4,7 +4,7 @@ An end-to-end pipeline that turns raw video/audio (YouTube links or local files)
 
 Built with **LangChain (LCEL)**, **Google Gemini**, **OpenAI Whisper**, **Sarvam AI**, **ChromaDB**, and **Streamlit**.
 
-🔗 **[Live Demo](https://your-streamlit-url-here.streamlit.app)** *(replace with your actual deployed URL)*
+🔗 **[Live Demo](https://shahnaz-parveen-ai-video-meeting-assistant-app-al1wct.streamlit.app/)**
 
 > ⚠️ **Known limitation on the live demo:** YouTube URL processing works reliably when run locally, but may fail on the deployed version — YouTube blocks requests from cloud/datacenter IP ranges (this affects Streamlit Cloud, Hugging Face Spaces, and virtually every free cloud host equally, not just this project). **File upload is the recommended input method on the live demo.** YouTube URL input works perfectly when the app is run locally. See the demo video below for the full pipeline including YouTube URL support.
 
